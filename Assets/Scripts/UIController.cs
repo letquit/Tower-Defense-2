@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class UIController : MonoBehaviour
 {
@@ -20,6 +23,18 @@ public class UIController : MonoBehaviour
 
     private Platform _currentPlatform;
 
+    [SerializeField] private Button speed1Button;
+    [SerializeField] private Button speed2Button;
+    [SerializeField] private Button speed3Button;
+
+    [SerializeField] private Color normalButtonColor = Color.white;
+    [SerializeField] private Color selectedButtonColor = Color.blue;
+    [SerializeField] private Color normalTextColor = Color.black;
+    [SerializeField] private Color selectedTextColor = Color.white;
+
+    [SerializeField] private GameObject pausePanel;
+    private bool _isGamePaused = false;
+
     private void OnEnable()
     {
         Spawner.OnWaveChanged += UpdateWaveText;
@@ -36,6 +51,23 @@ public class UIController : MonoBehaviour
         GameManager.OnResourcesChanged -= UpdateResourcesText;
         Platform.OnPlatformClicked -= HandlePlatformClicked;
         TowerCard.OnTowerSelected -= HandleTowerSelected;
+    }
+
+    private void Start()
+    {
+        speed1Button.onClick.AddListener(() => SetGameSpeed(.2f));
+        speed2Button.onClick.AddListener(() => SetGameSpeed(1f));
+        speed3Button.onClick.AddListener(() => SetGameSpeed(2f));
+        
+        HighLightSelectedSpeedButton(GameManager.Instance.GameSpeed);
+    }
+
+    private void Update()
+    {
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            TogglePause();
+        }
     }
 
     private void UpdateWaveText(int currentWave)
@@ -71,7 +103,7 @@ public class UIController : MonoBehaviour
     {
         towerPanel.SetActive(false);
         Platform.towerPanelOpen = false;
-        GameManager.Instance.SetTimeScale(1f);
+        GameManager.Instance.SetTimeScale(GameManager.Instance.GameSpeed);
     }
 
     private void PopulateTowerCards()
@@ -111,5 +143,63 @@ public class UIController : MonoBehaviour
         noResourcesText.SetActive(true);
         yield return new WaitForSecondsRealtime(3f);
         noResourcesText.SetActive(false);
+    }
+
+    private void SetGameSpeed(float timeScale)
+    {
+        HighLightSelectedSpeedButton(timeScale);
+        GameManager.Instance.SetGameSpeed(timeScale);
+    }
+    
+    private void UpdateButtonVisual(Button button, bool isSelected)
+    {
+        button.image.color = isSelected ? selectedButtonColor : normalButtonColor;
+        TMP_Text text = button.GetComponentInChildren<TMP_Text>();
+        if (text != null)
+        {
+            text.color = isSelected ? selectedTextColor : normalTextColor;
+        }
+    }
+    
+    private void HighLightSelectedSpeedButton(float selectedSpeed)
+    { 
+        UpdateButtonVisual(speed1Button, selectedSpeed == 0.2f);
+        UpdateButtonVisual(speed2Button, selectedSpeed == 1f);
+        UpdateButtonVisual(speed3Button, selectedSpeed == 2f);
+    }
+
+    public void TogglePause()
+    {
+        if (towerPanel.activeSelf)
+            return;
+        
+        if (_isGamePaused)
+        {
+            pausePanel.SetActive(false);
+            _isGamePaused = false;
+            GameManager.Instance.SetTimeScale(GameManager.Instance.GameSpeed);
+        }
+        else
+        {
+            pausePanel.SetActive(true);
+            _isGamePaused = true;
+            GameManager.Instance.SetTimeScale(0f);
+        }
+    }
+
+    public void RestartLevel()
+    {
+        GameManager.Instance.SetTimeScale(1f);
+        Scene currentScene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(currentScene.buildIndex);
+    }
+    
+    public void QuitGame()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 }

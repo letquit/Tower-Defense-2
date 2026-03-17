@@ -4,6 +4,9 @@ using UnityEngine;
 public class Enemy : MonoBehaviour
 {
     [SerializeField] private EnemyData data;
+    
+    public EnemyData Data => data;
+        
     public static event Action<EnemyData> OnEnemyReachedEnd;
     public static event Action<Enemy> OnEnemyDestroyed; 
     
@@ -12,17 +15,21 @@ public class Enemy : MonoBehaviour
     private Vector3 _targetPosition;
     private int _currentWayPoint;
     private float _lives;
+    private float _maxLives;
+
+    [SerializeField] private Transform healthBar;
+    private Vector3 _healthBarOriginalScale;
 
     private void Awake()
     {
         _currentPath = GameObject.Find("Path1").GetComponent<Path>();
+        _healthBarOriginalScale = healthBar.localScale;
     }
 
     private void OnEnable()
     {
         _currentWayPoint = 0;
         _targetPosition = _currentPath.GetPosition(_currentWayPoint);
-        _lives = data.lives;
     }
 
     private void Update()
@@ -51,11 +58,27 @@ public class Enemy : MonoBehaviour
     {
         _lives -= damage;
         _lives = Math.Max(_lives, 0);
+        UpdateHealthBar();
 
         if (_lives <= 0)
         {
             OnEnemyDestroyed?.Invoke(this);
             gameObject.SetActive(false);
         }
+    }
+    
+    private void UpdateHealthBar()
+    {
+        float healthPercent = _lives / _maxLives;
+        Vector3 scale = _healthBarOriginalScale;
+        scale.x = _healthBarOriginalScale.x * healthPercent;
+        healthBar.localScale = scale;
+    }
+
+    public void Initialize(float healthMultiplier)
+    {
+        _maxLives = _lives = data.lives * healthMultiplier;
+        _lives = _maxLives;
+        UpdateHealthBar();
     }
 }

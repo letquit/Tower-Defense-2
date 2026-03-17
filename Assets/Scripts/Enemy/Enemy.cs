@@ -19,6 +19,8 @@ public class Enemy : MonoBehaviour
 
     [SerializeField] private Transform healthBar;
     private Vector3 _healthBarOriginalScale;
+    
+    private bool _hasBeenCounted = false;
 
     private void Awake()
     {
@@ -34,6 +36,8 @@ public class Enemy : MonoBehaviour
 
     private void Update()
     {
+        if (_hasBeenCounted) return;
+        
         // move towards target position
         transform.position = Vector3.MoveTowards(transform.position, _targetPosition, data.speed * Time.deltaTime);
         
@@ -48,6 +52,7 @@ public class Enemy : MonoBehaviour
             }
             else
             {
+                _hasBeenCounted = true;
                 OnEnemyReachedEnd?.Invoke(data);
                 gameObject.SetActive(false);
             }
@@ -56,12 +61,15 @@ public class Enemy : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
+        if (_hasBeenCounted) return;
+        
         _lives -= damage;
         _lives = Math.Max(_lives, 0);
         UpdateHealthBar();
 
         if (_lives <= 0)
         {
+            _hasBeenCounted = true;
             OnEnemyDestroyed?.Invoke(this);
             gameObject.SetActive(false);
         }
@@ -77,6 +85,7 @@ public class Enemy : MonoBehaviour
 
     public void Initialize(float healthMultiplier)
     {
+        _hasBeenCounted = false;
         _maxLives = _lives = data.lives * healthMultiplier;
         _lives = _maxLives;
         UpdateHealthBar();

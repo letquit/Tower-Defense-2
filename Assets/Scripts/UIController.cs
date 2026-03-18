@@ -34,6 +34,7 @@ public class UIController : MonoBehaviour
 
     [SerializeField] private GameObject pausePanel;
     private bool _isGamePaused = false;
+    [SerializeField] private GameObject gameOverPanel;
 
     private void OnEnable()
     {
@@ -78,6 +79,11 @@ public class UIController : MonoBehaviour
     private void UpdateLivesText(int currentLives)
     {
         livesText.text = $"Lives: {currentLives}";
+
+        if (currentLives <= 0)
+        {
+            ShowGameOver();
+        }
     }
 
     private void UpdateResourcesText(int currentResources)
@@ -201,5 +207,17 @@ public class UIController : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    public void GoToMainMenu()
+    {
+        GameManager.Instance.SetTimeScale(1f);
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    private void ShowGameOver()
+    {
+        GameManager.Instance.SetTimeScale(0f);
+        gameOverPanel.SetActive(true);
     }
 }

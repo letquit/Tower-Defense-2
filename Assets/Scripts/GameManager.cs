@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -37,12 +38,14 @@ public class GameManager : MonoBehaviour
     {
         Enemy.OnEnemyReachedEnd += HandleEnemyReachedEnd;
         Enemy.OnEnemyDestroyed += HandleEnemyDestroyed;
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
     
     private void OnDisable()
     {
         Enemy.OnEnemyReachedEnd -= HandleEnemyReachedEnd;
         Enemy.OnEnemyDestroyed -= HandleEnemyDestroyed;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void HandleEnemyReachedEnd(EnemyData data)
@@ -80,5 +83,20 @@ public class GameManager : MonoBehaviour
             _resources -= amount;
             OnResourcesChanged?.Invoke(_resources);
         }
+    }
+
+    public void ResetGameState()
+    {
+        _lives = LevelManager.Instance.CurrentLevel.startingLives;
+        OnLivesChanged?.Invoke(_lives);
+        _resources = LevelManager.Instance.CurrentLevel.startingReasources;
+        OnResourcesChanged?.Invoke(_resources);
+        
+        SetGameSpeed(1f);
+    }
+    
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        ResetGameState();
     }
 }

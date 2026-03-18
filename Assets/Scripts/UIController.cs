@@ -12,7 +12,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text waveText;
     [SerializeField] private TMP_Text livesText;
     [SerializeField] private TMP_Text resourcesText;
-    [SerializeField] private GameObject noResourcesText;
+    [SerializeField] private TMP_Text warningText;
 
     [SerializeField] private GameObject towerPanel;
     [SerializeField] private GameObject towerCardPrefab;
@@ -35,6 +35,8 @@ public class UIController : MonoBehaviour
     [SerializeField] private GameObject pausePanel;
     private bool _isGamePaused = false;
     [SerializeField] private GameObject gameOverPanel;
+    [SerializeField] private TMP_Text objectiveText;
+    [SerializeField] private GameObject missionCompletePanel;
 
     private void OnEnable()
     {
@@ -43,6 +45,8 @@ public class UIController : MonoBehaviour
         GameManager.OnResourcesChanged += UpdateResourcesText;
         Platform.OnPlatformClicked += HandlePlatformClicked;
         TowerCard.OnTowerSelected += HandleTowerSelected;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        Spawner.OnMissionComplete += ShowMissionComplete;
     }
     
     private void OnDisable()
@@ -52,6 +56,8 @@ public class UIController : MonoBehaviour
         GameManager.OnResourcesChanged -= UpdateResourcesText;
         Platform.OnPlatformClicked -= HandlePlatformClicked;
         TowerCard.OnTowerSelected -= HandleTowerSelected;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        Spawner.OnMissionComplete -= ShowMissionComplete;
     }
 
     private void Start()
@@ -131,6 +137,13 @@ public class UIController : MonoBehaviour
     
     private void HandleTowerSelected(TowerData towerData)
     {
+        if (_currentPlatform.transform.childCount > 0)
+        {
+            HideTowerPanel();
+            StartCoroutine(ShowWarningMessage("This platform already has a tower"));
+            return;
+        }
+        
         if (GameManager.Instance.Resources >= towerData.cost)
         {
             GameManager.Instance.SpendResources(towerData.cost);
@@ -138,17 +151,18 @@ public class UIController : MonoBehaviour
         }
         else
         {
-            StartCoroutine(ShowNoResourcesMessage());
+            StartCoroutine(ShowWarningMessage("Not enough resources"));
         }
         
         HideTowerPanel();
     }
     
-    private IEnumerator ShowNoResourcesMessage()
+    private IEnumerator ShowWarningMessage(string message)
     {
-        noResourcesText.SetActive(true);
+        warningText.text = message;
+        warningText.gameObject.SetActive(true);
         yield return new WaitForSecondsRealtime(3f);
-        noResourcesText.SetActive(false);
+        warningText.gameObject.SetActive(false);
     }
 
     private void SetGameSpeed(float timeScale)
@@ -195,9 +209,7 @@ public class UIController : MonoBehaviour
 
     public void RestartLevel()
     {
-        GameManager.Instance.SetTimeScale(1f);
-        Scene currentScene = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(currentScene.buildIndex);
+        LevelManager.Instance.LoadLevel(LevelManager.Instance.CurrentLevel);
     }
     
     public void QuitGame()
@@ -219,5 +231,31 @@ public class UIController : MonoBehaviour
     {
         GameManager.Instance.SetTimeScale(0f);
         gameOverPanel.SetActive(true);
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        StartCoroutine(ShowObjective());
+    }
+
+    private IEnumerator ShowObjective()
+    {
+        objectiveText.text = $"Survive {LevelManager.Instance.CurrentLevel.wavesToWins} waves!";
+        objectiveText.gameObject.SetActive(true);
+        yield return new WaitForSeconds(3f);
+        objectiveText.gameObject.SetActive(false);
+    }
+
+    private void ShowMissionComplete()
+    {
+        missionCompletePanel.SetActive(true);
+        GameManager.Instance.SetTimeScale(0f);
+    }
+
+    public void EnterEndlessMode()
+    {
+        missionCompletePanel.SetActive(false);
+        GameManager.Instance.SetTimeScale(GameManager.Instance.GameSpeed);
+        Spawner.Instance.EnableEndlessMode();
     }
 }
